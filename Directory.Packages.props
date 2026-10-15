@@ -1,0 +1,57 @@
+<Project>
+  <!-- Central Package Management: one source of truth for every dependency version.
+       csproj files reference packages WITHOUT a Version attribute; versions live here. -->
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Transitive dependencies are not promoted to top-level; security overrides are referenced explicitly where needed. -->
+    <CentralPackageTransitivePinningEnabled>false</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+  <ItemGroup>
+    <!-- Microsoft.Extensions.* / ASP.NET Core (aligned to the .NET 10 servicing baseline). -->
+    <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.Abstractions" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Hosting.Abstractions" Version="10.0.13" />
+    <!-- Entity Framework Core (SQL Server in deployed environments, in-memory in test mode). -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.SqlServer" Version="10.0.13" />
+    <!-- API: versioning, OpenAPI UI, health checks. -->
+    <PackageVersion Include="Asp.Versioning.Mvc" Version="10.2.1" />
+    <PackageVersion Include="Asp.Versioning.Mvc.ApiExplorer" Version="10.2.1" />
+    <PackageVersion Include="Asp.Versioning.OpenApi" Version="10.2.1" />
+    <PackageVersion Include="Scalar.AspNetCore" Version="2.18.0" />
+    <PackageVersion Include="AspNetCore.HealthChecks.SqlServer" Version="9.0.0" />
+    <!-- Email (SMTP). -->
+    <PackageVersion Include="MailKit" Version="4.18.1" />
+    <!-- Validation. -->
+    <PackageVersion Include="FluentValidation" Version="12.2.0" />
+    <!-- Resilience (Polly v8): HTTP clients and the email pipeline. -->
+    <PackageVersion Include="Microsoft.Extensions.Http.Resilience" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.Extensions.Resilience" Version="10.11.0" />
+    <!-- Logging and metrics. -->
+    <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
+    <PackageVersion Include="Serilog.Formatting.Compact" Version="3.0.0" />
+    <PackageVersion Include="prometheus-net.AspNetCore" Version="8.2.1" />
+    <!-- Optional OTLP trace export (Order.Infrastructure.Observability). -->
+    <PackageVersion Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" Version="1.20.0" />
+    <PackageVersion Include="OpenTelemetry.Extensions.Hosting" Version="1.20.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.19.0" />
+    <PackageVersion Include="OpenTelemetry.Instrumentation.SqlClient" Version="1.19.0" />
+    <!-- Security overrides of vulnerable transitive dependencies (referenced explicitly by the affected projects). -->
+    <!-- Microsoft.Data.SqlClient (9.0.x) and MimeKit/MailKit (10.0.0) pull vulnerable System.Security.Cryptography.Pkcs (GHSA-2fmv-rv2c-59x7, GHSA-846f-f764-76mx). -->
+    <PackageVersion Include="System.Security.Cryptography.Pkcs" Version="10.0.13" />
+    <!-- Tests. -->
+    <PackageVersion Include="coverlet.collector" Version="8.0.1" />
+    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.13" />
+    <PackageVersion Include="Microsoft.Extensions.Diagnostics.Testing" Version="10.11.0" />
+    <PackageVersion Include="Microsoft.NET.Test.Sdk" Version="18.3.0" />
+    <PackageVersion Include="NSubstitute" Version="5.3.0" />
+    <PackageVersion Include="NUnit" Version="4.5.1" />
+    <PackageVersion Include="NUnit.Analyzers" Version="4.12.0" />
+    <PackageVersion Include="NUnit3TestAdapter" Version="6.2.0" />
+    <!-- Integration tests against a real SQL Server (skipped when Docker is not running). -->
+    <PackageVersion Include="Testcontainers.MsSql" Version="4.16.0" />
+  </ItemGroup>
+</Project>

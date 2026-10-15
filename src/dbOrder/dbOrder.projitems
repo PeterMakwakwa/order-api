@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup>
+    <MSBuildAllProjects Condition="'$(MSBuildVersion)' == '' Or '$(MSBuildVersion)' &lt; '16.0'">$(MSBuildAllProjects);$(MSBuildThisFileFullPath)</MSBuildAllProjects>
+    <HasSharedItems>true</HasSharedItems>
+    <SharedGUID>c743bb31-010b-460d-96d2-0532b4095771</SharedGUID>
+  </PropertyGroup>
+  <PropertyGroup Label="Configuration">
+    <Import_RootNamespace>dbOrder</Import_RootNamespace>
+  </PropertyGroup>
+  <ItemGroup>
+    <None Include="$(MSBuildThisFileDirectory)beforeMigration\0001_ALTER_dbOrder_AddApplicationLogin.sql" />
+    <None Include="$(MSBuildThisFileDirectory)beforeMigration\0002_ALTER_dbOrder_AddExtendedProperties.sql" />
+    <None Include="$(MSBuildThisFileDirectory)createDatabase\0001_CREATE_dbOrder.sql" />
+    <None Include="$(MSBuildThisFileDirectory)up\0001_CREATE_tblProduct.sql" />
+    <None Include="$(MSBuildThisFileDirectory)up\0002_CREATE_tblOrder.sql" />
+    <None Include="$(MSBuildThisFileDirectory)up\0003_CREATE_tblOrderLineItem.sql" />
+    <None Include="$(MSBuildThisFileDirectory)up\0004_CREATE_queueOrderPlaced.sql" />
+    <None Include="$(MSBuildThisFileDirectory)up\0005_INSERT_tblProduct.ENV.LOCAL.sql" />
+    <None Include="$(MSBuildThisFileDirectory)up\0006_CREATE_tblPromotion.sql" />
+    <None Include="$(MSBuildThisFileDirectory)up\0007_INSERT_tblPromotion.ENV.LOCAL.sql" />
+    <None Include="$(MSBuildThisFileDirectory)up\0008_ALTER_tblOrder_AddConcurrencyToken.sql" />
+    <None Include="$(MSBuildThisFileDirectory)up\0009_ALTER_tblOrder_AddPaymentStartedDate.sql" />
+  </ItemGroup>
+</Project>

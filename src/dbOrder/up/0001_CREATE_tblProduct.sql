@@ -1,0 +1,9 @@
+CREATE TABLE tblProduct
+(
+	[Id] INT NOT NULL,
+	[Name] NVARCHAR(200) NOT NULL,
+	[Price] DECIMAL(18, 2) NOT NULL,
+
+	CONSTRAINT PK_Product PRIMARY KEY (Id),
+	CONSTRAINT UC_Product_Name UNIQUE (Name)
+)

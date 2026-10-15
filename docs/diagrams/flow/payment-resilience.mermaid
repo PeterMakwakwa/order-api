@@ -1,0 +1,19 @@
+---
+title: Payment gateway resilience (one pipeline per gateway)
+---
+flowchart LR
+    gateway[HttpPaymentGateway]
+    timeout[Timeout<br/>whole call]
+    retry[Retry<br/>network errors, 408, 429, 5xx<br/>exponential back-off]
+    breaker[Circuit breaker<br/>opens after N consecutive failures]
+    provider(Payment provider)
+    callbacks[OnRetry / OnOpened callbacks<br/>retry and circuit metrics + logs]
+
+    gateway --> timeout --> retry --> breaker --> provider
+    retry -.-> callbacks
+    breaker -.-> callbacks
+
+    provider -->|202| succeeded((Succeeded))
+    provider -->|400| rejected((Rejected<br/>not retried → 402))
+    provider -->|409| duplicate((Duplicate<br/>not retried → 409))
+    breaker -->|open circuit, timeout<br/>or retries used up| providerError((ProviderError → 503<br/>client may retry<br/>with the same key))

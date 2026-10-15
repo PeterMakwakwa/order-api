@@ -1,0 +1,16 @@
+# Build output
+[Bb]in/
+[Oo]bj/
+[Pp]ublish/
+TestResults/
+*.user
+.vs/
+.vscode/
+.idea/
+
+# Secrets - never commit
+.env
+*.env
+!.env.example
+secrets.json
+appsettings.*.local.json

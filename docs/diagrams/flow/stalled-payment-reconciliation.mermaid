@@ -1,0 +1,22 @@
+---
+title: Reconciling stalled payments
+---
+flowchart TB
+    R[StalledPaymentReconciliationHandler<br/>BackgroundService, polls every minute]
+    D(dbOrder)
+    G[OrderPaymentProcessor<br/>same code as the place-order handler]
+    P(Payment provider)
+    stillStalled{Still PendingPayment<br/>and stalled?}
+    saved{Saved?<br/>ConcurrencyToken unchanged}
+    done[Settled: Completed / AwaitingPayment / PaymentFailed<br/>+ outbox row if accepted]
+    skip[Skip: a client retry or another<br/>instance settled it first; rolled back]
+
+    R -->|1. Find orders PendingPayment for longer<br/>than StalledPaymentTimeout, oldest first| D
+    R -->|2. Per order, own unit of work: reload| stillStalled
+    stillStalled -->|no| skip
+    stillStalled -->|yes| G
+    G -->|3. Charge again with the same<br/>provider Idempotency-Key = order id| P
+    P -->|first charge went through: same result<br/>never arrived: charged now| G
+    G -->|4. Record outcome + outbox row<br/>in one transaction| saved
+    saved -->|yes| done
+    saved -->|concurrency conflict| skip

@@ -1,0 +1,11 @@
+IF (NOT EXISTS (SELECT name FROM master.dbo.sysdatabases WHERE (name = '{{DatabaseName}}')))
+BEGIN
+	EXEC (N'CREATE DATABASE [{{DatabaseName}}]')
+
+	IF SERVERPROPERTY('EngineEdition') <> 5
+	BEGIN
+		EXEC (N'ALTER DATABASE [{{DatabaseName}}] SET AUTO_CLOSE OFF WITH NO_WAIT')
+		EXEC (N'ALTER DATABASE [{{DatabaseName}}] SET RECOVERY SIMPLE WITH NO_WAIT')
+		EXEC (N'ALTER DATABASE [{{DatabaseName}}] SET READ_COMMITTED_SNAPSHOT ON')
+	END
+END

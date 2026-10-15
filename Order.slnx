@@ -1,0 +1,55 @@
+<Solution>
+  <Folder Name="/0. Tests/">
+    <Project Path="test/Order.Tests/Order.Tests.csproj" />
+  </Folder>
+  <Folder Name="/1. Presentation/">
+    <Project Path="src/Order.Presentation.Api/Order.Presentation.Api.csproj" />
+  </Folder>
+  <Folder Name="/2. Infrastructure/">
+    <Project Path="src/Order.Infrastructure/Order.Infrastructure.csproj" />
+  </Folder>
+  <Folder Name="/3. Application/">
+    <Project Path="src/Order.Application/Order.Application.csproj" />
+  </Folder>
+  <Folder Name="/4. Domain/">
+    <Project Path="src/Order.Domain/Order.Domain.csproj" />
+  </Folder>
+  <Folder Name="/5. Shared/">
+    <Project Path="src/dbOrder/dbOrder.shproj" />
+  </Folder>
+  <Folder Name="/Solution Items/">
+    <File Path=".editorconfig" />
+    <File Path=".dockerignore" />
+    <File Path=".gitattributes" />
+    <File Path=".gitignore" />
+    <File Path="Directory.Build.props" />
+    <File Path="Directory.Packages.props" />
+    <File Path="README.md" />
+  </Folder>
+  <Folder Name="/Solution Items/build/">
+    <File Path="build/docker/Dockerfile" />
+    <File Path="build/local/New-LocalToken.ps1" />
+    <File Path="build/local/Set-LocalSecrets.ps1" />
+    <File Path=".github/workflows/ci.yml" />
+    <File Path="build/mermaid/generate-mermaid-png.ps1" />
+    <File Path="src/.env.example" />
+    <File Path="src/docker-compose.yml" />
+  </Folder>
+  <Folder Name="/Solution Items/docs/">
+    <File Path="docs/background.md" />
+    <File Path="docs/architecture.md" />
+    <File Path="docs/api.md" />
+    <File Path="docs/local-development.md" />
+    <File Path="docs/operations.md" />
+    <File Path="docs/ai-usage.md" />
+  </Folder>
+  <Folder Name="/Solution Items/docs/diagrams/">
+    <File Path="docs/diagrams/erd/dbOrder-entity-relationship-diagram.mermaid" />
+    <File Path="docs/diagrams/flow/outbox-approach.mermaid" />
+    <File Path="docs/diagrams/flow/payment-resilience.mermaid" />
+    <File Path="docs/diagrams/flow/place-order.mermaid" />
+    <File Path="docs/diagrams/flow/solution-architecture.mermaid" />
+    <File Path="docs/diagrams/flow/stalled-payment-reconciliation.mermaid" />
+    <File Path="docs/diagrams/flow/target-microservices.mermaid" />
+  </Folder>
+</Solution>

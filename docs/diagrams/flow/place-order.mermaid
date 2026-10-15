@@ -1,0 +1,66 @@
+---
+title: Placing an order (POST /api/v1/order)
+---
+flowchart TB
+    client[Client]
+    middleware[CorrelationIdMiddleware]
+    auth[JWT bearer authentication<br/>+ rate limit per customer]
+    controller[OrderController<br/>customer id from the token]
+    validate[PlaceOrderRequestValidator]
+    handler[PlaceOrderRequestHandler]
+    gateway[Payment gateway<br/>Card / PayPal / BankTransfer]
+    provider(Payment provider)
+    database(dbOrder)
+
+    hasHeader{CorrelationId header?}
+    isAuthorized{Valid token with<br/>customer_id?}
+    isValid{Request shape valid?<br/>Idempotency-Key present?}
+    seenKey{Order with this<br/>Idempotency-Key?}
+    sameRequest{Same request?<br/>normalised hash}
+    canRetry{Earlier attempt failed<br/>with a provider error?}
+    isSettled{Settled?}
+    referencesValid{Products exist?<br/>Promotion code applicable?}
+    isAccepted{Payment accepted?}
+
+    badRequest((400))
+    unauthorized((401 / 403))
+    tooMany((429))
+    created((201 Created<br/>Location: /order/id))
+    replayed((original result<br/>Idempotent-Replayed: true))
+    reused((422))
+    inProgress((409))
+    failed((402 / 409 / 503))
+
+    client --> middleware
+    middleware --> hasHeader
+    hasHeader -->|missing| badRequest
+    hasHeader -->|present| auth
+    auth -->|over limit| tooMany
+    auth --> isAuthorized
+    isAuthorized -->|no| unauthorized
+    isAuthorized -->|yes| controller
+    controller --> validate
+    validate --> isValid
+    isValid -->|no: every error listed| badRequest
+    isValid -->|yes| handler
+
+    handler --> seenKey
+    seenKey -->|yes| sameRequest
+    sameRequest -->|no| reused
+    sameRequest -->|yes| canRetry
+    canRetry -->|yes: back to PendingPayment,<br/>charge the same order again| gateway
+    canRetry -->|no| isSettled
+    isSettled -->|no, first request still charging| inProgress
+    isSettled -->|yes: no new charge| replayed
+    seenKey -->|no| referencesValid
+    referencesValid -->|no| badRequest
+
+    referencesValid -->|yes: 1. save order as PendingPayment<br/>unique customer + Idempotency-Key| database
+    handler -->|2. charge, provider Idempotency-Key = order id<br/>not cancelled if the client disconnects| gateway
+    gateway -->|timeout / retry / circuit breaker| provider
+    handler --> isAccepted
+
+    isAccepted -->|yes: 3. save outcome + OrderPlaced outbox row<br/>in one transaction| database
+    isAccepted -->|yes| created
+    isAccepted -->|no: 3. save PaymentFailed + outcome| database
+    isAccepted -->|no| failed

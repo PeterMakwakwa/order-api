@@ -1,0 +1,14 @@
+CREATE TABLE tblOrderLineItem
+(
+	[Id] BIGINT IDENTITY(1, 1) NOT NULL,
+	[OrderId] BIGINT NOT NULL,
+	[ProductId] INT NOT NULL,
+	[ProductName] NVARCHAR(200) NOT NULL,
+	[UnitPrice] DECIMAL(18, 2) NOT NULL,
+	[Quantity] INT NOT NULL,
+
+	CONSTRAINT PK_OrderLineItem PRIMARY KEY (Id),
+	CONSTRAINT FK_OrderLineItem_Order FOREIGN KEY (OrderId) REFERENCES tblOrder (Id) ON DELETE CASCADE,
+
+	INDEX IX_OrderLineItem_OrderId NONCLUSTERED (OrderId)
+)

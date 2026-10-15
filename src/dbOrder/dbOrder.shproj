@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The grate scripts for dbOrder, shown in Visual Studio as a project. Nothing is compiled: grate deploys the scripts (see src/docker-compose.yml).
+     The Visual Studio imports are conditional so dotnet CLI tools (list package, format) can load the solution. -->
+<Project ToolsVersion="15.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <PropertyGroup Label="Globals">
+    <ProjectGuid>c743bb31-010b-460d-96d2-0532b4095771</ProjectGuid>
+    <MinimumVisualStudioVersion>14.0</MinimumVisualStudioVersion>
+    <CodeSharingPath>$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\CodeSharing</CodeSharingPath>
+  </PropertyGroup>
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <Import Project="$(CodeSharingPath)\Microsoft.CodeSharing.Common.Default.props" Condition="Exists('$(CodeSharingPath)\Microsoft.CodeSharing.Common.Default.props')" />
+  <Import Project="$(CodeSharingPath)\Microsoft.CodeSharing.Common.props" Condition="Exists('$(CodeSharingPath)\Microsoft.CodeSharing.Common.props')" />
+  <PropertyGroup />
+  <Import Project="dbOrder.projitems" Label="Shared" />
+  <Import Project="$(CodeSharingPath)\Microsoft.CodeSharing.CSharp.targets" Condition="Exists('$(CodeSharingPath)\Microsoft.CodeSharing.CSharp.targets')" />
+</Project>

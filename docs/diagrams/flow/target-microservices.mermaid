@@ -1,0 +1,35 @@
+---
+title: Target design (not built) - one service per responsibility, connected by a message broker
+---
+flowchart LR
+    client(("Client"))
+
+    subgraph OrderService["Order service"]
+        orderApi["Order API<br/>orders · idempotency · history"]
+        orderDb[("Orders DB")]
+        orderOutbox["Outbox publisher"]
+    end
+
+    subgraph PaymentService["Payment service"]
+        paymentWorker["Payment processing<br/>providers · retries · reconciliation"]
+        paymentDb[("Payments DB")]
+    end
+
+    subgraph EmailService["Email service"]
+        emailWorker["Notifications<br/>templates · SMTP · de-duplication"]
+    end
+
+    broker{{"Kafka or Azure Service Bus"}}
+    provider(("Payment providers"))
+    smtp(("SMTP"))
+
+    client --> orderApi
+    orderApi --> orderDb
+    orderOutbox -->|OrderPlaced| broker
+    broker -->|OrderPlaced| paymentWorker
+    paymentWorker --> paymentDb
+    paymentWorker --> provider
+    paymentWorker -->|PaymentSucceeded / PaymentFailed| broker
+    broker -->|payment result| orderApi
+    broker -->|OrderConfirmed| emailWorker
+    emailWorker --> smtp

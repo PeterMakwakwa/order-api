@@ -1,0 +1,61 @@
+erDiagram
+	tblProduct {
+		int Id PK
+		nvarchar(200) Name UK
+		decimal Price "(18,2)"
+	}
+
+	tblPromotion {
+		int Id PK
+		varchar(50) Code UK "upper-case"
+		decimal DiscountRate "(5,4) 0 < rate < 1"
+		bit IsActive
+		datetimeoffset ValidFrom
+		datetimeoffset ValidTo "NULL = no end"
+	}
+
+	tblOrder {
+		bigint Id PK
+		uniqueidentifier UniqueId UK
+		varchar(100) CorrelationId
+		varchar(100) IdempotencyKey UK "unique with CustomerId"
+		char(64) RequestHash "SHA-256 of the request"
+		int CustomerId UK "from the access token"
+		nvarchar(320) CustomerEmail
+		varchar(32) PaymentMethod
+		varchar(32) Status
+		varchar(32) PaymentOutcome
+		varchar(50) PromotionCode
+		decimal DiscountRate "(5,4) from the promotion"
+		decimal Subtotal "(18,2)"
+		decimal Total "(18,2)"
+		nvarchar(500) PaymentFailureReason
+		datetimeoffset CreatedDate
+		datetimeoffset PaymentStartedDate "reconciliation of stalled payments"
+		uniqueidentifier ConcurrencyToken "changes on every status change"
+	}
+
+	tblOrderLineItem {
+		bigint Id PK
+		bigint OrderId FK
+		int ProductId
+		nvarchar(200) ProductName
+		decimal UnitPrice "(18,2)"
+		int Quantity
+	}
+
+	queueOrderPlaced {
+		bigint Id PK
+		int Version
+		nvarchar(max) Message
+		datetimeoffset CreatedDate
+		datetimeoffset ProcessedDate
+		int Attempts
+		nvarchar(2000) LastError
+		datetimeoffset LockedUntil "claim lease"
+		uniqueidentifier LockToken "concurrency token"
+	}
+
+	tblOrder ||--|{ tblOrderLineItem : "contains"
+	tblProduct ||--o{ tblOrderLineItem : "snapshot of"
+	tblPromotion |o--o{ tblOrder : "discount from"

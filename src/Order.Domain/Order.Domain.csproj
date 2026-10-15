@@ -1,0 +1,10 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- The core of the onion: the Order aggregate, its commands and rules, and the interfaces the outer layers implement.
+       References nothing else in the solution. Each folder is a namespace (Order.Domain.Entities, ...). -->
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Order.Tests" />
+  </ItemGroup>
+
+</Project>

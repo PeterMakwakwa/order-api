@@ -1,0 +1,121 @@
+name: order-api
+
+#=========================================================================
+# Local development stack.
+#   docker compose up -d                  SQL Server + grate (dbOrder) + Mailpit; run the API from your IDE
+#   docker compose --profile api up -d    the above plus the API itself in a container (http://localhost:5000)
+# Secrets come from src/.env (copy .env.example, never commit .env).
+#=========================================================================
+services:
+#=========================================================================
+# SQL Server
+# -----------------
+# Server: localhost,${SQL_HOST_PORT} (default 1433)
+# Admin: sa / MSSQL_SA_PASSWORD from .env (deployments only; the API uses ORDER_DB_USER)
+#=========================================================================
+  sql:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: order-sql
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_PID: Developer
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in src/.env (copy .env.example)}
+    ports:
+      - "${SQL_HOST_PORT:-1433}:1433"
+    volumes:
+      - order-sql-data:/var/opt/mssql
+    healthcheck:
+      test: ["CMD-SHELL", "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$$MSSQL_SA_PASSWORD\" -C -b -Q 'SELECT 1' > /dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+#=========================================================================
+# Deploy the database scripts (src/dbOrder) with grate
+# -----------------
+# createDatabase → beforeMigration (application login, every run) → up (once per script);
+# *.ENV.LOCAL.sql scripts (seed data) only run because of --environment=LOCAL.
+#=========================================================================
+  dbOrder:
+    image: erikbra/grate:2.1.6
+    entrypoint: [""]
+    environment:
+      MSSQL_SA_PASSWORD: ${MSSQL_SA_PASSWORD:?Set MSSQL_SA_PASSWORD in src/.env}
+      ORDER_DB_USER: ${ORDER_DB_USER:-svc_order_api}
+      ORDER_DB_PASSWORD: ${ORDER_DB_PASSWORD:?Set ORDER_DB_PASSWORD in src/.env}
+    command:
+      - /bin/sh
+      - -c
+      - |
+        retry_count=0
+        max_retries=5
+        while [ $$retry_count -lt $$max_retries ]
+        do
+          echo "Attempt $$((retry_count + 1))..."
+          # Pooling=false: grate connects to dbOrder before creating it, and the connection pool would keep returning
+          # that failed login ("Cannot open database") on the first deployment.
+          ./grate --connstring="Server=sql;Database=dbOrder;User Id=sa;Password=$$MSSQL_SA_PASSWORD;TrustServerCertificate=True;Pooling=false" \
+            --sqlfilesdirectory=/db --version=1.0.0 --databasetype=sqlserver --silent --outputPath=/tmp/grate \
+            --createdatabase=true --environment=LOCAL --transaction=false \
+            --ut=AppLogin=$$ORDER_DB_USER --ut=AppLoginPassword=$$ORDER_DB_PASSWORD
+          if [ $$? -eq 0 ]; then
+            echo "Database deployed."
+            exit 0
+          fi
+          retry_count=$$((retry_count + 1))
+          echo "Deployment failed. Retrying in 5 seconds..."
+          sleep 5
+        done
+        echo "Deployment failed after $$max_retries attempts."
+        exit 1
+    volumes:
+      - ./dbOrder:/db:ro
+    depends_on:
+      sql:
+        condition: service_healthy
+
+#=========================================================================
+# Mailpit (catches the order confirmation emails)
+# -----------------
+# SMTP: localhost:1025   Inbox UI: http://localhost:8025
+#=========================================================================
+  mailpit:
+    image: axllent/mailpit:v1.31
+    container_name: order-mailpit
+    ports:
+      - "1025:1025"
+      - "8025:8025"
+
+#=========================================================================
+# The API (optional, profile "api")
+# -----------------
+# http://localhost:5000/scalar/v1   (bearer token: build/local/New-LocalToken.ps1)
+#=========================================================================
+  api:
+    profiles: ["api"]
+    build:
+      context: ..
+      dockerfile: build/docker/Dockerfile
+    container_name: order-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Localhost
+      ApplicationConfiguration__Persistence__ApplicationDatabase__Server: sql
+      ApplicationConfiguration__Persistence__ApplicationDatabase__Username: ${ORDER_DB_USER:-svc_order_api}
+      ApplicationConfiguration__Persistence__ApplicationDatabase__Password: ${ORDER_DB_PASSWORD:?Set ORDER_DB_PASSWORD in src/.env}
+      ApplicationConfiguration__Smtp__Host: mailpit
+      # Accepts tokens from build/local/New-LocalToken.ps1 (dotnet user-jwts). Run it once with -UpdateEnvFile to copy
+      # the signing key here; the issuer and audiences come from appsettings.Localhost.json.
+      Authentication__Schemes__Bearer__SigningKeys__0__Issuer: dotnet-user-jwts
+      Authentication__Schemes__Bearer__SigningKeys__0__Value: ${ORDER_JWT_SIGNING_KEY:-}
+      Authentication__Schemes__Bearer__SigningKeys__0__Length: 32
+    ports:
+      - "5000:5000"
+    depends_on:
+      dbOrder:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+
+volumes:
+  order-sql-data:

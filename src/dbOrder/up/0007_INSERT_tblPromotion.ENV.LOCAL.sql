@@ -1,0 +1,5 @@
+INSERT INTO tblPromotion ([Code], [DiscountRate], [IsActive], [ValidFrom], [ValidTo])
+VALUES
+	('WELCOME10', 0.1000, 1, '2020-01-01T00:00:00+00:00', NULL),
+	('EXPIRED20', 0.2000, 1, '2020-01-01T00:00:00+00:00', '2021-01-01T00:00:00+00:00'),
+	('INACTIVE30', 0.3000, 0, '2020-01-01T00:00:00+00:00', NULL)

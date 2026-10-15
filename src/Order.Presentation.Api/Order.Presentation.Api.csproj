@@ -1,0 +1,37 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);1591</NoWarn>
+    <!-- Local secrets (database credentials, SMTP password, payment API keys): dotnet user-secrets -->
+    <UserSecretsId>order-api-6f1c2b7e-3a4d-4e5f-9b8c-1d2e3f4a5b6c</UserSecretsId>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Asp.Versioning.Mvc" />
+    <PackageReference Include="Asp.Versioning.Mvc.ApiExplorer" />
+    <PackageReference Include="Asp.Versioning.OpenApi" />
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" />
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Scalar.AspNetCore" />
+    <PackageReference Include="Serilog.AspNetCore" />
+    <PackageReference Include="Serilog.Formatting.Compact" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Order.Application\Order.Application.csproj" />
+    <ProjectReference Include="..\Order.Infrastructure\Order.Infrastructure.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Update="appsettings*.json">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Re-renders changed docs/**/*.mermaid diagrams to PNG (needs the Mermaid CLI; skipped otherwise). -->
+  <Target Name="GenerateMermaidDiagrams" AfterTargets="Build" Condition="'$(Configuration)' == 'Debug' And '$(OS)' == 'Windows_NT' And '$(CI)' != 'true' And '$(TF_BUILD)' != 'True'">
+    <Exec Command="powershell -NoProfile -ExecutionPolicy Bypass -File &quot;$(MSBuildThisFileDirectory)..\..\build\mermaid\generate-mermaid-png.ps1&quot;" ContinueOnError="WarnAndContinue" />
+  </Target>
+
+</Project>

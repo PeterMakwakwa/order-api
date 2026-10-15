@@ -1,0 +1,21 @@
+---
+title: Outbox approach (confirmation emails)
+---
+flowchart TB
+    A[API]
+    H[PlaceOrderRequestHandler]
+    D(dbOrder)
+    O[OrderPlacedOutboxMessageHandler<br/>BackgroundService, one per instance]
+    C{Claim saved?<br/>LockToken unchanged}
+    E[IEmailSender<br/>MailKit, stable Message-ID per order]
+    M(SMTP / Mailpit)
+    S[Skip: another instance<br/>holds the message]
+
+    A -->|Handle request| H
+    H -->|Store payment outcome and OrderPlaced row<br/>in one transaction| D
+    O -->|1. Poll ids: unprocessed, attempts left,<br/>no live lease| D
+    O -->|2. Per message: set LockedUntil + new LockToken| C
+    C -->|concurrency conflict| S
+    C -->|yes| E
+    E -->|Retry 4xx / connection errors with back-off| M
+    O -->|3. Save per message - Success: ProcessedDate<br/>Failure: Attempts + 1, LastError; lease released| D

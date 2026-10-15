@@ -1,0 +1,46 @@
+---
+title: Solution architecture (every arrow points inwards, towards the Domain)
+---
+flowchart TB
+    client(("Client"))
+
+    subgraph Presentation["Order.Presentation.Api"]
+        direction LR
+        middleware["Middleware<br/>correlation id · logging · errors<br/>JWT · rate limiting"]
+        controller["OrderController"]
+    end
+
+    subgraph Infrastructure["Order.Infrastructure"]
+        direction LR
+        persistence["Persistence<br/>EF Core"]
+        payments["Payments<br/>HttpClient + Polly"]
+        email["Email<br/>MailKit"]
+        observability["Observability<br/>Serilog · Prometheus · OTLP"]
+    end
+
+    subgraph Application["Order.Application"]
+        direction LR
+        handlers["Handlers<br/>place order · get order · order history"]
+        jobs["Background jobs<br/>outbox emails · payment reconciliation"]
+        validators["Validators"]
+    end
+
+    subgraph Domain["Order.Domain (the core)"]
+        direction LR
+        aggregate["Order aggregate<br/>business rules"]
+        interfaces["Interfaces<br/>unit of work · payment gateway · email sender"]
+    end
+
+    database[("SQL Server<br/>dbOrder")]
+    provider(("Payment<br/>providers"))
+    smtp(("SMTP"))
+
+    client --> Presentation
+    Presentation -->|uses| Application
+    Presentation -.->|wires up| Infrastructure
+    Application -->|uses| Domain
+    Infrastructure -.->|implements interfaces of| Domain
+
+    persistence --> database
+    payments --> provider
+    email --> smtp
