@@ -1,6 +1,7 @@
 using Microsoft.Extensions.DependencyInjection;
 using NSubstitute;
 using NSubstitute.ExceptionExtensions;
+using Order.Application.Events.V1.Produced;
 using Order.Application.Handlers.Abstractions;
 using Order.Application.Handlers.Outbox;
 using Order.Application.Models.Request.V1;
@@ -66,7 +67,10 @@ namespace Order.Tests.UnitTests.Application.Handlers
                 Arg.Is<EmailMessage>(email => email.To == "customer@example.com"
                     && email.Body.Contains(placed.OrderId.ToString())
                     && email.Body.Contains("awaiting your bank transfer")
-                    && email.Body.Contains("$80.97")
+                    && email.Body.Contains("- 1 x Keyboard at $49.99 each: $49.99")
+                    && email.Body.Contains("- 2 x Mouse at $19.99 each: $39.98")
+                    && email.Body.Contains("Discount (WELCOME10): -$9.00")
+                    && email.Body.Contains("Total: $80.97")
                     && email.DeduplicationKey == $"order-confirmation.{placed.OrderId:N}"),
                 Arg.Any<CancellationToken>());
         }
@@ -135,6 +139,114 @@ namespace Order.Tests.UnitTests.Application.Handlers
         }
 
         [Test]
+        public async Task ProcessPendingMessagesAsync_Version1MessageWithoutItems_StillSendsWithTheTotal()
+        {
+            // Assemble: a message written before version 2 added the line items.
+            Guid orderId = Guid.NewGuid();
+            await AddOutboxMessageAsync(1, $$"""
+                {"Id":"{{orderId}}","CorrelationId":"c","CustomerId":42,"CustomerEmail":"customer@example.com","Total":80.97,"PaymentMethod":0,"Status":2,"CreatedDate":"2026-01-01T00:00:00+00:00"}
+                """);
+
+            // Act
+            await _handler!.ProcessPendingMessagesAsync(CancellationToken.None);
+
+            // Assert
+            Assert.That((await GetOnlyOutboxMessageAsync()).ProcessedDate, Is.Not.Null);
+            await _emailSender.Received(1).SendAsync(
+                Arg.Is<EmailMessage>(email => email.Body == $"Your order {orderId} has been placed.{Environment.NewLine}Total: $80.97"),
+                Arg.Any<CancellationToken>());
+        }
+
+        [Test]
+        public async Task ProcessPendingMessagesAsync_NewerVersionThanSupported_RecordsDeserializationFailure()
+        {
+            // Assemble
+            await AddOutboxMessageAsync(OrderPlaced.Version + 1, "{}");
+
+            // Act
+            await _handler!.ProcessPendingMessagesAsync(CancellationToken.None);
+
+            // Assert
+            Assert.That((await GetOnlyOutboxMessageAsync()).LastError, Does.Contain("OutboxMessageDeserializationException"));
+            await _emailSender.DidNotReceiveWithAnyArgs().SendAsync(default!, default);
+        }
+
+        [Test]
+        public void BuildConfirmationEmail_OrderWithDiscount_ListsItemsSubtotalDiscountAndTotal()
+        {
+            // Assemble
+            Guid orderId = Guid.NewGuid();
+            OrderPlaced orderPlaced = new()
+            {
+                Id = orderId,
+                CorrelationId = "c",
+                CustomerId = 42,
+                CustomerEmail = "customer@example.com",
+                Subtotal = 89.97m,
+                Total = 80.97m,
+                PromotionCode = "WELCOME10",
+                PaymentMethod = PaymentMethods.CreditCard,
+                Status = OrderStatus.Completed,
+                CreatedDate = DateTimeOffset.UtcNow,
+                Items =
+                [
+                    new OrderPlacedLineItem { ProductId = 1, ProductName = "Keyboard", UnitPrice = 49.99m, Quantity = 1 },
+                    new OrderPlacedLineItem { ProductId = 2, ProductName = "Mouse", UnitPrice = 19.99m, Quantity = 2 }
+                ]
+            };
+
+            // Act
+            EmailMessage email = OrderPlacedOutboxMessageHandler.BuildConfirmationEmail(orderPlaced);
+
+            // Assert
+            string[] expected =
+            [
+                $"Your order {orderId} has been placed.",
+                "",
+                "Items:",
+                "- 1 x Keyboard at $49.99 each: $49.99",
+                "- 2 x Mouse at $19.99 each: $39.98",
+                "",
+                "Subtotal: $89.97",
+                "Discount (WELCOME10): -$9.00",
+                "Total: $80.97"
+            ];
+            Assert.That(email.Body, Is.EqualTo(string.Join(Environment.NewLine, expected)));
+        }
+
+        [Test]
+        public void BuildConfirmationEmail_NoDiscount_ShowsOnlyTheTotal()
+        {
+            // Assemble
+            OrderPlaced orderPlaced = new()
+            {
+                Id = Guid.NewGuid(),
+                CorrelationId = "c",
+                CustomerId = 42,
+                CustomerEmail = "customer@example.com",
+                Subtotal = 199.00m,
+                Total = 199.00m,
+                PaymentMethod = PaymentMethods.BankTransfer,
+                Status = OrderStatus.AwaitingPayment,
+                CreatedDate = DateTimeOffset.UtcNow,
+                Items = [new OrderPlacedLineItem { ProductId = 3, ProductName = "Monitor", UnitPrice = 199.00m, Quantity = 1 }]
+            };
+
+            // Act
+            EmailMessage email = OrderPlacedOutboxMessageHandler.BuildConfirmationEmail(orderPlaced);
+
+            // Assert
+            using (Assert.EnterMultipleScope())
+            {
+                Assert.That(email.Body, Does.Contain("awaiting your bank transfer"));
+                Assert.That(email.Body, Does.Contain("- 1 x Monitor at $199.00 each: $199.00"));
+                Assert.That(email.Body, Does.Not.Contain("Subtotal"));
+                Assert.That(email.Body, Does.Not.Contain("Discount"));
+                Assert.That(email.Body, Does.EndWith("Total: $199.00"));
+            }
+        }
+
+        [Test]
         public async Task ProcessPendingMessagesAsync_ClaimedByAnotherProcessor_SkipsMessage()
         {
             // Assemble: another instance holds a lease on the message.
@@ -195,6 +307,20 @@ namespace Order.Tests.UnitTests.Application.Handlers
 
             // Assert
             Assert.ThrowsAsync<ConcurrencyConflictException>(() => second.SaveChangesAsync());
+        }
+
+        private async Task AddOutboxMessageAsync(int version, string message)
+        {
+            using (IOrderUnitOfWork unitOfWork = _serviceProvider!.GetRequiredService<IUnitOfWorkFactory<IOrderUnitOfWork>>().Create())
+            {
+                await unitOfWork.OrderPlacedOutboxRepository.AddAsync(new OrderPlacedOutboxMessage(new CreateOrderPlacedOutboxMessage
+                {
+                    Version = version,
+                    Message = message,
+                    CreatedDate = DateTimeOffset.UtcNow
+                }));
+                await unitOfWork.SaveChangesAsync();
+            }
         }
 
         private async Task ClaimOnlyOutboxMessageAsync(DateTimeOffset lockedUntil)

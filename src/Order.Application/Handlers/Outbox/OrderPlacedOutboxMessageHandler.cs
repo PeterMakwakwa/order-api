@@ -13,6 +13,7 @@ using Order.Domain.Observability.Metrics;
 using Order.Domain.UnitOfWork;
 using Order.Domain.UnitOfWork.Exceptions;
 using System.Globalization;
+using System.Text;
 using System.Text.Json;
 
 namespace Order.Application.Handlers.Outbox
@@ -156,7 +157,7 @@ namespace Order.Application.Handlers.Outbox
 
         private static OrderPlaced Deserialize(OrderPlacedOutboxMessage message)
         {
-            if (message.Version != OrderPlaced.Version)
+            if (message.Version < OrderPlaced.MinimumSupportedVersion || message.Version > OrderPlaced.Version)
             {
                 throw new OutboxMessageDeserializationException(string.Format(WarningMessages.OutboxMessageVersionUnsupported, message.Id, message.Version));
             }
@@ -172,18 +173,41 @@ namespace Order.Application.Handlers.Outbox
             }
         }
 
-        private static EmailMessage BuildConfirmationEmail(OrderPlaced orderPlaced)
+        /// <summary>
+        /// Plain text: what was ordered, then the subtotal, discount and total. A version 1 message has no items, so its
+        /// email shows the total only.
+        /// </summary>
+        internal static EmailMessage BuildConfirmationEmail(OrderPlaced orderPlaced)
         {
-            // Invariant culture: the amount is in USD and must not pick up the server's decimal separator.
-            string body = orderPlaced.Status == OrderStatus.AwaitingPayment
-                ? string.Create(CultureInfo.InvariantCulture, $"Your order {orderPlaced.Id} has been placed and is awaiting your bank transfer. Total: ${orderPlaced.Total:0.00}")
-                : string.Create(CultureInfo.InvariantCulture, $"Your order {orderPlaced.Id} has been placed. Total: ${orderPlaced.Total:0.00}");
+            // Invariant culture: the amounts are in USD and must not pick up the server's decimal separator.
+            StringBuilder body = new();
+            body.Append(CultureInfo.InvariantCulture, $"Your order {orderPlaced.Id} has been placed");
+            body.AppendLine(orderPlaced.Status == OrderStatus.AwaitingPayment ? " and is awaiting your bank transfer." : ".");
+
+            if (orderPlaced.Items.Count != 0)
+            {
+                body.AppendLine().AppendLine("Items:");
+                foreach (OrderPlacedLineItem item in orderPlaced.Items)
+                {
+                    body.AppendLine(CultureInfo.InvariantCulture,
+                        $"- {item.Quantity} x {item.ProductName} at ${item.UnitPrice:0.00} each: ${item.UnitPrice * item.Quantity:0.00}");
+                }
+
+                body.AppendLine();
+                if (orderPlaced.Subtotal is decimal subtotal && subtotal != orderPlaced.Total)
+                {
+                    body.AppendLine(CultureInfo.InvariantCulture, $"Subtotal: ${subtotal:0.00}");
+                    body.AppendLine(CultureInfo.InvariantCulture, $"Discount ({orderPlaced.PromotionCode}): -${subtotal - orderPlaced.Total:0.00}");
+                }
+            }
+
+            body.Append(CultureInfo.InvariantCulture, $"Total: ${orderPlaced.Total:0.00}");
 
             return new EmailMessage
             {
                 To = orderPlaced.CustomerEmail,
                 Subject = ConfirmationSubject,
-                Body = body,
+                Body = body.ToString(),
                 // Delivery is at-least-once; a confirmation re-sent after a crash keeps the same Message-ID.
                 DeduplicationKey = $"order-confirmation.{orderPlaced.Id:N}"
             };

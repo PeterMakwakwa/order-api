@@ -18,7 +18,7 @@ After the original version was complete, an AI coding assistant (Claude Code) wa
 | Payments | The charge is no longer cancelled when the client disconnects; payments that failed with a provider error can be retried; the reconciliation job for stalled payments (`StalledPaymentReconciliationHandler`, `OrderPaymentProcessor`, `PaymentStartedDate`) |
 | Domain | `Order.RetryPayment`, the order concurrency token, item and quantity limits |
 | Application | Validation reports every error; keyset paging for the order history (`OrderHistoryCursor`); request-hash normalisation for retries; ownership check in the get-order query; the `rejected` metric; domain rule errors mapped to 500 |
-| Infrastructure | Product cache removed (current prices on every order); stable `Message-ID` on confirmation emails; the SQL scripts `0008` and `0009` |
+| Infrastructure | Product cache removed (current prices on every order); stable `Message-ID` on confirmation emails; ordered items listed in the confirmation email (`OrderPlaced` event version 2); the SQL scripts `0008` and `0009` |
 | Structure | The original projects merged into one project per layer (namespaces unchanged) |
 | Tests | About 60 new tests, including SQL Server integration tests; the fix that made the SQL Server integration tests pass on a fresh database |
 

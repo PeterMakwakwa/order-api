@@ -118,7 +118,16 @@ namespace Order.Application.Handlers.Payments
                 Total = order.Total,
                 PaymentMethod = order.PaymentMethod,
                 Status = order.Status,
-                CreatedDate = order.CreatedDate
+                CreatedDate = order.CreatedDate,
+                Subtotal = order.Subtotal,
+                PromotionCode = order.PromotionCode,
+                Items = [.. order.LineItems.Select(lineItem => new OrderPlacedLineItem
+                {
+                    ProductId = lineItem.ProductId,
+                    ProductName = lineItem.ProductName,
+                    UnitPrice = lineItem.UnitPrice,
+                    Quantity = lineItem.Quantity
+                })]
             };
         }
     }

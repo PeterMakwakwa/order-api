@@ -133,6 +133,7 @@ The solution was reviewed and improved in two rounds. Knowing what changed helps
 | Reading another customer's order | Loaded, then hidden | Filtered in the database query |
 | Retry with items in another order | Rejected as a different request | Recognised as the same order |
 | Duplicate confirmation emails | Possible after a crash | Same `Message-ID` on every send, so mail clients can de-duplicate |
+| Confirmation email content | Order id and total only | Lists every item, the subtotal, the discount and the total |
 | Project structure | About 20 projects | 4 projects, one per layer |
 | SQL Server integration tests | Failed on a fresh database | Fixed (connection pooling during the first deployment) |
 

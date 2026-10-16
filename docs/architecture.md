@@ -115,7 +115,7 @@ Two `BackgroundService`s run inside every API instance. Several instances can ru
 `OrderPlacedOutboxMessageHandler` polls `queueOrderPlaced` every 10 seconds. For each unprocessed message it:
 
 1. **Claims** it: sets a lease (`LockedUntil`) and a new `LockToken` (a concurrency token). If another instance claimed it first, the save fails and this instance skips it.
-2. **Sends** the email (MailKit, with retries). Every send of the same order's confirmation has the same `Message-ID`, so mail clients can de-duplicate it.
+2. **Sends** the email (MailKit, with retries). It lists each item with its quantity and price, then the subtotal, discount and total. The `OrderPlaced` event is versioned: version 2 added the items, and version 1 messages still in the outbox are sent with the total only. Every send of the same order's confirmation has the same `Message-ID`, so mail clients can de-duplicate it.
 3. **Records** the result: `ProcessedDate` on success, or `Attempts + 1` and `LastError` on failure (retried on a later poll, up to `MaxAttempts`).
 
 If an instance dies holding a message, the lease expires and another instance takes it over.

@@ -145,7 +145,7 @@ To get the next page, call again with `&cursor=NjM5Mjc2OTc3OTk2MDIzNTUwOjI`. Whe
 6. The order is saved as `PendingPayment` before it is charged, and the payment outcome is always recorded, even if the client disconnects.
 7. Outcomes: card and PayPal → `Completed`; bank transfer → `AwaitingPayment`; declined, duplicate or provider failure → `PaymentFailed`. Only a provider failure can be retried; every other outcome is final.
 8. Orders stuck in `PendingPayment` (the server died mid-payment) are settled automatically within about 6 minutes.
-9. A confirmation email is sent for every `Completed` or `AwaitingPayment` order. Email problems never affect the order.
+9. A confirmation email is sent for every `Completed` or `AwaitingPayment` order, listing what was ordered, the subtotal, any discount and the total. Email problems never affect the order.
 
 Local seed data: products `1` Keyboard (49.99), `2` Mouse (19.99), `3` Monitor (199.00); promotion codes `WELCOME10` (10% off), `EXPIRED20` (expired) and `INACTIVE30` (inactive).
 
